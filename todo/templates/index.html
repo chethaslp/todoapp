@@ -105,7 +105,7 @@
     function editTodo(tid){
       // Get the todo from the list with the given tid
       var todo = window.todos.find(obj => {return obj.tid === tid})
-      $("#form_heading").text("Edit Form")
+      $("#form_heading").text("Edit Todo")
 
       // Sets the todo Object to window for later use.
       window.currentTodo = todo
