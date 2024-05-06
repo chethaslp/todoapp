@@ -3,7 +3,7 @@ import { getAuth, signOut, onAuthStateChanged, signInWithRedirect, GoogleAuthPro
 import "https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.min.js";
 import showtimeago from "./showtimeago.js";
 
-// CHANGE THIS VARIABLE
+// Firebase Config Files
 const firebaseConfig = {
     apiKey: "AIzaSyAjhjIfgmhLryKLnLumsSkeJ_wpHK9QSQE",
     authDomain: "devprojectsclp.firebaseapp.com",
@@ -18,8 +18,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const loader = new bootstrap.Modal($("#modal-load"));
-const md_ss = new bootstrap.Modal($("#modal-ss"));
-let user, idToken;
 
 
 var mobileCheck = function() {
@@ -54,7 +52,7 @@ onAuthStateChanged(auth, (u)=>{
                     console.log(error)
                   });
                 document.addEventListener("refreshTodos", getUserTodos)
-                user = u;
+                window.user = u;
                 $(".dropdown").fadeIn();
             }
         })
@@ -67,16 +65,18 @@ onAuthStateChanged(auth, (u)=>{
                 $("#user-signin").show();
                 $(".hist-bar-cnt").fadeOut();
                 $("#user-signout").hide();  
-                user = null;
+                window.user = null;
                 $(".dropdown").fadeIn();
             }
         });
     }
 });
 
+// Signin & Signout Buttons
 $("#user-signin").click(function (e) { 
     loader.show();
     signInWithRedirect(auth, new GoogleAuthProvider())
+    .then(()=> window.location.hash = "")
     .catch((error) => {
         console.log(error)
         loader.hide();
@@ -87,15 +87,40 @@ $("#user-signout").click(function (e) {
     signOut(auth);
 });
 
+
+// Toast
+function toast(txt){
+    $(".toast-body").text(txt);
+    $(".toast").toast("show");
+}
+window.toast = toast
+
+// To remove animation class after it is finished
 document.onanimationend = (e) => {
     $(e.target).removeClass("shake");
-  };
+};
 
-$('#modal-ss').on('hide.bs.modal', function (e) {
-    $(".hist-bar-cnt").fadeIn();
-    $("#inp-url").val("");
+// To show loading while user is signing in.
+if(window.location.hash === "#signin"){
+    loader.show();
+    
+}
+
+// ######################
+//       UI Events
+// ######################
+
+// Do Shake animation if form is invalid.
+$('input, textarea').each(function () {
+    $(this).on('invalid',()=> $(".dsv").addClass("shake"));
 });
 
+$("#btn-reset").click(function (e) { 
+    window.currentTodo = null
+    $("#form_heading").text("Add Todo");
+  });
+
+// Get User Todos from the API enpoint and swiftly animate it to the UI.
 export function getUserTodos() {
     var idToken=localStorage.getItem("token")
     fetch("api/todo", {
@@ -106,6 +131,7 @@ export function getUserTodos() {
         window.todos = data
         if(data.length != 0){
             $("#usr-hist").html("");
+            // Appending each todo to the HTML list
             data.forEach(p => {
                 $("#usr-hist").append(`
                 <li class="list-group-item" id="todo${p.tid}">
@@ -127,11 +153,14 @@ export function getUserTodos() {
         }else{
             $("#usr-hist").html("<span> No Todos So Far.</span>");
         }
+        // Animation to
         $(".load-bar").fadeOut({
             complete:()=>{
                 $(".usr-hist-bar").css("display","flex")
                 $(".usr-hist-bar").fadeIn();
+                
             }
         });
     });
 };
+

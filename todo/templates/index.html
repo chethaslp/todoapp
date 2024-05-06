@@ -16,29 +16,21 @@
     <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-sm" role="document">
         <div class="modal-content">
             <div class="modal-body">
-                <i class="fa fa-gear fa-spin"></i>&nbsp; Waiting for signin ...
+                <i class="fa fa-gear fa-spin"></i>&nbsp; Authenticating...
             </div>
         </div>
     </div>
 </div>
 
-  <div class="modal fade" id="modal-ss" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" role="dialog" aria-labelledby="modalTitleId" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-sm" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="modalTitleId">Todo Added!</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          The site has been added to our checklist. Now, any changes found in the site will be emailed to:<br>
-          <div class="d-flex mt-2"><span class="rounded text-center btn-primary flex-fill p-1" id="user-email"> mbdfdm@gmail.com </span></div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Okay</button>
-        </div>
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 100;">
+    <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body"></div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
       </div>
     </div>
   </div>
+
   <main>
 
   <div style="display: flex; flex-direction: row; justify-content: space-between; width: 100%;">
@@ -57,7 +49,7 @@
           <li><hr class="dropdown-divider"></li> -->
           <li>
             <a class="dropdown-item" style="display: none;" href="#" id="user-signout">Sign out</a>
-            <a id="user-signin" class="dropdown-item" href="#" style="text-transform:none">
+            <a id="user-signin" class="dropdown-item" href="#signin" style="text-transform:none">
             <img width="20px" style="margin-bottom:3px; margin-right:5px" alt="Google sign-in" src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" />
             Signin
             </a>
@@ -111,9 +103,12 @@
   <script src= "{% static 'js/main.js' %}?a={{ r }}" type="module"></script>
   <script>
     function editTodo(tid){
+      // Get the todo from the list with the given tid
       var todo = window.todos.find(obj => {return obj.tid === tid})
-      console.log(todo)
       $("#form_heading").text("Edit Form")
+
+      // Sets the todo Object to window for later use.
+      window.currentTodo = todo
 
       $("#id_title").val(todo.title).change();
       $("#id_details").val(todo.details).change();
@@ -131,7 +126,33 @@
     }
 
     $('#todoForm').submit(function (e) {
-      if($("#form_heading").val() == "Edit Form"){
+      if(!window.user){
+        e.preventDefault();
+        $(".user-bar").addClass("shake");
+        toast("Signin to continue.")
+        return;
+      }
+      if(window.currentTodo){
+          // Checks if the user is editing an existing TODO.
+        fetch(`/api/todo/${window.currentTodo.tid}/`,{
+          method:"PUT",
+          headers: { 
+              'Content-Type':'application/x-www-form-urlencoded',
+              'X-Token': localStorage.getItem('token'),
+              'X-CSRFToken': "{{ csrf_token }}"
+          },
+          body: $('#todoForm').serialize()
+      }).then((data)=>{
+        if(data.ok){
+          // Resets everything
+          window.currentTodo = null
+          $('#todoForm').trigger('reset');
+          $("#form_heading").text("Add Todo")
+          document.dispatchEvent(new CustomEvent("refreshTodos"))
+
+          toast("Edit Successfull.")
+        }
+      })
 
       }else{
         fetch('api/todo',{
@@ -144,13 +165,16 @@
         body: $('#todoForm').serialize()
       }).then((data)=>{
         if(data.ok){
-          $('#todoForm').trigger('reset');
-          document.dispatchEvent(new CustomEvent("refreshTodos"))
-        }
+            $("#form_heading").text("Add Todo")
+            $('#todoForm').trigger('reset');
+            document.dispatchEvent(new CustomEvent("refreshTodos"))
+            
+            toast("Added Successfully.")
+          }
       })
       }
       return false;
-  });
+    });
   </script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
 </body>
